@@ -1,11 +1,11 @@
 /**
  *
  * @file interrupts.cpp
- * @author Sasisekhar Govind
+ * @author Sasisekhar Govind, Aydan Eng, Eric Cui
  *
  */
 
-#include "interrupts.hpp"
+#include "interrupts_aydaneng_ericcui.hpp"
 
 static unsigned int next_pid = 1;
 
@@ -74,12 +74,56 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             child_process.partition_number = -1;
             if (!allocate_memory(&child_process))
             {
-                // Handle fork failure (e.g., no memory)
+                // Handle fork failure
+
+                // Log failure and IRET
                 execution += std::to_string(current_time) + ", 0, FORK failed: No memory for child process\n";
-                // Don't modify 'current' or 'wait_queue', just return from ISR
                 execution += std::to_string(current_time) + ", 1, IRET\n";
                 current_time += 1;
-                continue; // Skip to next trace line
+
+                // Flow Control: Find IF_PARENT block, execute its contents, and jump 'i' past ENDIF.
+                bool in_parent_block = false;
+                int endif_index = -1; // To store the index of the ENDIF line
+
+                for (size_t j = i + 1; j < trace_file.size(); j++)
+                {
+                    auto [activity_j, duration_j, program_name_j] = parse_trace(trace_file[j]);
+
+                    if (activity_j == "IF_CHILD")
+                    {
+                        continue;
+                    }
+                    else if (activity_j == "IF_PARENT")
+                    {
+                        in_parent_block = true;
+                        continue;
+                    }
+                    else if (activity_j == "ENDIF")
+                    {
+                        endif_index = j; // Save ENDIF index
+                        break;
+                    }
+
+                    if (in_parent_block)
+                    {
+                        // Manually execute the lines in the IF_PARENT block
+                        if (activity_j == "CPU")
+                        {
+                            execution += std::to_string(current_time) + ", " + std::to_string(duration_j) + ", CPU Burst\n";
+                            current_time += duration_j;
+                        }
+                        // If IF_PARENT contained EXEC or SYSCALL, you must execute them here as well.
+                    }
+                }
+
+                // Set the main loop index 'i' to the ENDIF line.
+                if (endif_index != -1) {
+                    i = endif_index;
+                } else {
+                    i = trace_file.size(); // Stop the loop if ENDIF is missing
+                }
+                
+                continue;
             }
 
             // Update parent PCB in the wait queue and have child PCB as current running process
@@ -105,9 +149,8 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             //  * Get the index of where the parent is supposed to start executing from
             std::vector<std::string> child_trace;
             bool skip = true;
-            // bool exec_flag = false; // <-- REMOVE
             int parent_index = -1;
-            int endif_index = -1; // <-- ADD THIS
+            int endif_index = -1;
 
             for (size_t j = i + 1; j < trace_file.size(); j++)
             {
@@ -151,6 +194,7 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
                 i = endif_index; // Or at ENDIF if no IF_PARENT
             }
             // If neither was found, 'i' just increments, and parent runs from the next line
+
             ///////////////////////////////////////////////////////////////////////////////////////////
             // With the child's trace, run the child (HINT: think recursion)
 
