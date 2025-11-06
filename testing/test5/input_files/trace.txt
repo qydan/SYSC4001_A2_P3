@@ -1,0 +1,4 @@
+EXEC program1, 5
+EXEC program2, 5
+EXEC program3, 5
+EXEC program4, 10

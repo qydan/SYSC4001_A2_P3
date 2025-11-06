@@ -1,0 +1,6 @@
+0, 1, switch to kernel mode
+1, 10, context saved
+11, 1, find vector 3 in memory position 0x0006
+12, 1, load address 0X042B into the PC
+13, 5, Program is 60 Mb large
+18, 0, EXEC failed: Memory allocation failed for program1
