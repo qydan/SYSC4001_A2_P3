@@ -5,7 +5,9 @@
  *
  */
 
-#include<interrupts.hpp>
+#include "interrupts.hpp"
+
+static unsigned int next_pid = 1;
 
 std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string> trace_file, int time, std::vector<std::string> vectors, std::vector<int> delays, std::vector<external_file> external_files, PCB current, std::vector<PCB> wait_queue) {
 
@@ -51,19 +53,42 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             ///////////////////////////////////////////////////////////////////////////////////////////
             //Add your FORK output here
 
+            //Cloning PCB
+            execution += std::to_string(current_time) + ", " + std::to_string(duration_intr) + ", cloning the PCB\n";
+            current_time += duration_intr;
+            
+            //Create the child PCB
+            PCB child_process = current;
+            child_process.PID = next_pid;
+            next_pid += 1;
 
+            //Update parent PCB in the wait queue and have child PCB as current running process
+            PCB parent_process = current;
+            wait_queue.push_back(parent_process);
+            current = child_process;
+
+            //Scheduler call
+            execution += std::to_string(current_time) + ", 0, scheduler called\n";
+
+            //Log
+            system_status += std::to_string(current_time) + "; current trace file: " + trace_file[i] + "\n";
+            system_status += print_PCB(current, wait_queue) + "\n";
+
+            //Return from ISR
+            execution += std::to_string(current_time) + ", 1, IRET\n";
+            current_time += 1;
 
             ///////////////////////////////////////////////////////////////////////////////////////////
 
             //The following loop helps you do 2 things:
-            // * Collect the trace of the chile (and only the child, skip parent)
+            // * Collect the trace of the child (and only the child, skip parent)
             // * Get the index of where the parent is supposed to start executing from
             std::vector<std::string> child_trace;
             bool skip = true;
             bool exec_flag = false;
             int parent_index = 0;
 
-            for(size_t j = i; j < trace_file.size(); j++) {
+            for(size_t j = i + 1; j < trace_file.size(); j++) {
                 auto [_activity, _duration, _pn] = parse_trace(trace_file[j]);
                 if(skip && _activity == "IF_CHILD") {
                     skip = false;
@@ -71,28 +96,57 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
                 } else if(_activity == "IF_PARENT"){
                     skip = true;
                     parent_index = j;
-                    if(exec_flag) {
+                    if(exec_flag) { // break if the child executes EXEC and the parent block is reached
                         break;
                     }
                 } else if(skip && _activity == "ENDIF") {
                     skip = false;
-                    continue;
+                    parent_index = j; // Parent resumes execution *after* ENDIF, so we mark it for the jump below
                 } else if(!skip && _activity == "EXEC") {
                     skip = true;
                     child_trace.push_back(trace_file[j]);
                     exec_flag = true;
                 }
-
+                
                 if(!skip) {
                     child_trace.push_back(trace_file[j]);
                 }
+                
+                // If we reach ENDIF while skipping or after the child's block, done collecting the child's trace
+                if (_activity == "ENDIF") {
+                    // If no IF_PARENT was found, the parent must resume after the ENDIF
+                    if (parent_index == -1) {
+                         parent_index = j;
+                    }
+                    if (!skip) {
+                        break;
+                    }
+                }
             }
-            i = parent_index;
+            if (parent_index != -1) {
+                 i = parent_index;
+            }
 
             ///////////////////////////////////////////////////////////////////////////////////////////
             //With the child's trace, run the child (HINT: think recursion)
+            
+            //Save parent PCB, most recent one pushed to the wait queue
+            PCB parent_pcb = wait_queue.back();
+            wait_queue.pop_back();
 
+            //Run child recursively
+            auto [child_execution, child_status, child_final_time] = simulate_trace(child_trace, current_time, vectors, delays, external_files, current, wait_queue);
 
+            //Update exectuion and system status logs
+            execution += child_execution;
+            system_status += child_status;
+            current_time = child_final_time;
+
+            //After child process finishes, free its memory
+            free_memory(&current);
+
+            //Resume parent process
+            current = parent_pcb;
 
             ///////////////////////////////////////////////////////////////////////////////////////////
 
