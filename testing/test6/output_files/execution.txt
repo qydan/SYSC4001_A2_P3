@@ -1,0 +1,50 @@
+0, 10, CPU Burst
+10, 1, switch to kernel mode
+11, 10, context saved
+21, 1, find vector 2 in memory position 0x0004
+22, 1, load address 0X0695 into the PC
+23, 20, cloning the PCB
+43, 0, scheduler called
+44, 1, IRET
+44, 1, switch to kernel mode
+45, 10, context saved
+55, 1, find vector 3 in memory position 0x0006
+56, 1, load address 0X042B into the PC
+57, 50, Program is 10 Mb large
+107, 150, loading program into memory
+257, 3, marking partition as occupied
+260, 6, updating PCB
+266, 0, scheduler called
+266, 1, IRET
+267, 30, CPU Burst
+267, 1, Switch to kernel mode
+267, 4, context saved
+267, 1, find vector 0 in memory 0X01E3
+267, 1, obtain ISR address
+267, 39, Call device driver
+267, 6, Perform device check
+267, 65, Send device instruction
+414, 1, IRET
+267, 1, switch to kernel mode
+267, 4, context saved
+267, 1, find vector 0 in memory 0X01E3
+267, 62, store information in memory
+267, 3, reset the io operation
+267, 45, Send standby instruction
+531, 1, IRET
+532, 15, CPU Burst
+0, 1, Switch to kernel mode
+0, 4, context saved
+0, 1, find vector 8 in memory 0X06EF
+0, 1, obtain ISR address
+0, 167, Call device driver
+0, 729, Perform device check
+0, 104, Send device instruction
+1554, 1, IRET
+0, 1, switch to kernel mode
+0, 4, context saved
+0, 1, find vector 8 in memory 0X06EF
+0, 476, store information in memory
+0, 13, reset the io operation
+0, 511, Send standby instruction
+2561, 1, IRET

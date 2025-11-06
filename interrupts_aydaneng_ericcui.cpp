@@ -31,24 +31,62 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
         }
         else if (activity == "SYSCALL")
         { // As per Assignment 1
-            auto [intr, time] = intr_boilerplate(current_time, duration_intr, 10, vectors);
-            execution += intr;
-            current_time = time;
 
-            execution += std::to_string(current_time) + ", " + std::to_string(delays[duration_intr]) + ", SYSCALL ISR (ADD STEPS HERE)\n";
-            current_time += delays[duration_intr];
+            // From Assignment 1
+            execution.append(std::to_string(time) + ", 1, Switch to kernel mode\n");
+            current_time += 1;
+            execution.append(std::to_string(time) + ", 4, context saved\n");
+            current_time += 4;
+            execution.append(std::to_string(time) + ", 1, find vector " + std::to_string(duration_intr) + " in memory " + vectors[duration_intr] + "\n");
+            current_time += 1;
+            execution.append(std::to_string(time) + ", 1, obtain ISR address\n");
+            current_time += 1;
+
+            int remaining_io = delays[duration_intr];
+
+            int random_number = rand() % remaining_io - 2;
+            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Call device driver\n");
+            current_time += random_number;
+            remaining_io = remaining_io - random_number;
+
+            random_number = rand() % remaining_io - 1;
+            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Perform device check\n");
+            current_time += random_number;
+            remaining_io = remaining_io - random_number;
+
+            random_number = remaining_io;
+            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Send device instruction\n");
+            current_time += random_number;
+            remaining_io = remaining_io - random_number;
 
             execution += std::to_string(current_time) + ", 1, IRET\n";
             current_time += 1;
         }
         else if (activity == "END_IO")
         {
-            auto [intr, time] = intr_boilerplate(current_time, duration_intr, 10, vectors);
-            current_time = time;
-            execution += intr;
+            execution.append(std::to_string(time) + ", 1, switch to kernel mode\n");
+            current_time += 1;
+            execution.append(std::to_string(time) + ", 4, context saved\n");
+            current_time += 4;
+            execution.append(std::to_string(time) + ", 1, find vector " + std::to_string(duration_intr) + " in memory " + vectors[duration_intr] + "\n");
+            current_time += 1;
 
-            execution += std::to_string(current_time) + ", " + std::to_string(delays[duration_intr]) + ", ENDIO ISR(ADD STEPS HERE)\n";
-            current_time += delays[duration_intr];
+            // IO operations
+            int remaining_io = delays[duration_intr];
+            int random_number = rand() % remaining_io - 2;
+            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", store information in memory\n");
+            current_time += random_number;
+            remaining_io = remaining_io - random_number;
+
+            random_number = rand() % remaining_io - 1;
+            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", reset the io operation\n");
+            current_time += random_number;
+            remaining_io = remaining_io - random_number;
+
+            random_number = remaining_io;
+            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Send standby instruction\n");
+            current_time += random_number;
+            remaining_io = remaining_io - random_number;
 
             execution += std::to_string(current_time) + ", 1, IRET\n";
             current_time += 1;
@@ -74,55 +112,47 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             child_process.partition_number = -1;
             if (!allocate_memory(&child_process))
             {
-                // Handle fork failure
-
                 // Log failure and IRET
                 execution += std::to_string(current_time) + ", 0, FORK failed: No memory for child process\n";
                 execution += std::to_string(current_time) + ", 1, IRET\n";
                 current_time += 1;
 
-                // Flow Control: Find IF_PARENT block, execute its contents, and jump 'i' past ENDIF.
-                bool in_parent_block = false;
-                int endif_index = -1; // To store the index of the ENDIF line
+                // Find IF_PARENT block, execute its contents, and jump 'i' past ENDIF.
+                int parent_index = -1;
+                int endif_index = -1;
 
                 for (size_t j = i + 1; j < trace_file.size(); j++)
                 {
-                    auto [activity_j, duration_j, program_name_j] = parse_trace(trace_file[j]);
-
-                    if (activity_j == "IF_CHILD")
+                    auto [activity_j, _d, _pn] = parse_trace(trace_file[j]);
+                    if (activity_j == "IF_PARENT")
                     {
-                        continue;
-                    }
-                    else if (activity_j == "IF_PARENT")
-                    {
-                        in_parent_block = true;
-                        continue;
+                        parent_index = j; // Parent code starts here
                     }
                     else if (activity_j == "ENDIF")
                     {
-                        endif_index = j; // Save ENDIF index
+                        endif_index = j;
+                        if (parent_index == -1)
+                        {                     // No IF_PARENT block
+                            parent_index = j; // Parent resumes after ENDIF
+                        }
                         break;
                     }
-
-                    if (in_parent_block)
-                    {
-                        // Manually execute the lines in the IF_PARENT block
-                        if (activity_j == "CPU")
-                        {
-                            execution += std::to_string(current_time) + ", " + std::to_string(duration_j) + ", CPU Burst\n";
-                            current_time += duration_j;
-                        }
-                        // If IF_PARENT contained EXEC or SYSCALL, you must execute them here as well.
-                    }
                 }
 
-                // Set the main loop index 'i' to the ENDIF line.
-                if (endif_index != -1) {
+                // 3. Set the main loop's index 'i' to resume at the parent's code
+                if (parent_index != -1)
+                {
+                    i = parent_index; // The loop will increment to the line *after* IF_PARENT
+                }
+                else if (endif_index != -1)
+                {
                     i = endif_index;
-                } else {
+                }
+                else
+                {
                     i = trace_file.size(); // Stop the loop if ENDIF is missing
                 }
-                
+
                 continue;
             }
 
@@ -245,13 +275,12 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             current.size = new_program_size;
             current.partition_number = -1; // Reset partition before allocation
 
-            // allocate_memory() must be implemented to find a partition and update current.partition_number
+            // Find partition and update current.partition_number
             if (!allocate_memory(&current))
             {
                 execution += std::to_string(current_time) + ", 0, EXEC failed: Memory allocation failed for " + program_name + "\n";
                 system_status += "time: " + std::to_string(current_time) + "; current trace: " + trace_file[i] + "\n";
                 system_status += print_PCB(current, wait_queue) + "\n";
-                // If allocation fails, the process would typically be terminated or put to sleep, but we'll return to stop the simulation for this branch.
                 return {execution, system_status, current_time};
             }
 
