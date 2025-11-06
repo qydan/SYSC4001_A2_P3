@@ -1,4 +1,2 @@
-program1, 8
-program2, 2
-program3, 10
-program4, 15
+program1, 10
+program2, 15
