@@ -21,15 +21,15 @@
 277, 4, context saved
 277, 1, find vector 6 in memory 0X0639
 277, 1, obtain ISR address
-277, 39, Call device driver
-277, 160, Perform device check
-277, 66, Send device instruction
+334, 39, Call device driver
+373, 160, Perform device check
+533, 66, Send device instruction
 599, 1, IRET
 600, 15, CPU Burst
-277, 1, switch to kernel mode
-277, 4, context saved
-277, 1, find vector 6 in memory 0X0639
-277, 237, store information in memory
-277, 11, reset the io operation
-277, 17, Send standby instruction
+615, 1, switch to kernel mode
+616, 4, context saved
+620, 1, find vector 6 in memory 0X0639
+621, 237, store information in memory
+858, 11, reset the io operation
+869, 17, Send standby instruction
 886, 1, IRET

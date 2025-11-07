@@ -45,17 +45,17 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
             int remaining_io = delays[duration_intr];
 
             int random_number = rand() % remaining_io - 2;
-            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Call device driver\n");
+            execution.append(std::to_string(current_time) + ", " + std::to_string(random_number) + ", Call device driver\n");
             current_time += random_number;
             remaining_io = remaining_io - random_number;
 
             random_number = rand() % remaining_io - 1;
-            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Perform device check\n");
+            execution.append(std::to_string(current_time) + ", " + std::to_string(random_number) + ", Perform device check\n");
             current_time += random_number;
             remaining_io = remaining_io - random_number;
 
             random_number = remaining_io;
-            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Send device instruction\n");
+            execution.append(std::to_string(current_time) + ", " + std::to_string(random_number) + ", Send device instruction\n");
             current_time += random_number;
             remaining_io = remaining_io - random_number;
 
@@ -64,27 +64,27 @@ std::tuple<std::string, std::string, int> simulate_trace(std::vector<std::string
         }
         else if (activity == "END_IO")
         {
-            execution.append(std::to_string(time) + ", 1, switch to kernel mode\n");
+            execution.append(std::to_string(current_time) + ", 1, switch to kernel mode\n");
             current_time += 1;
-            execution.append(std::to_string(time) + ", 4, context saved\n");
+            execution.append(std::to_string(current_time) + ", 4, context saved\n");
             current_time += 4;
-            execution.append(std::to_string(time) + ", 1, find vector " + std::to_string(duration_intr) + " in memory " + vectors[duration_intr] + "\n");
+            execution.append(std::to_string(current_time) + ", 1, find vector " + std::to_string(duration_intr) + " in memory " + vectors[duration_intr] + "\n");
             current_time += 1;
 
             // IO operations
             int remaining_io = delays[duration_intr];
             int random_number = rand() % remaining_io - 2;
-            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", store information in memory\n");
+            execution.append(std::to_string(current_time) + ", " + std::to_string(random_number) + ", store information in memory\n");
             current_time += random_number;
             remaining_io = remaining_io - random_number;
 
             random_number = rand() % remaining_io - 1;
-            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", reset the io operation\n");
+            execution.append(std::to_string(current_time) + ", " + std::to_string(random_number) + ", reset the io operation\n");
             current_time += random_number;
             remaining_io = remaining_io - random_number;
 
             random_number = remaining_io;
-            execution.append(std::to_string(time) + ", " + std::to_string(random_number) + ", Send standby instruction\n");
+            execution.append(std::to_string(current_time) + ", " + std::to_string(random_number) + ", Send standby instruction\n");
             current_time += random_number;
             remaining_io = remaining_io - random_number;
 
